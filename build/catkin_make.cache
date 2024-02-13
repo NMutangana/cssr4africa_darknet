@@ -1,0 +1,2 @@
+
+-DCATKIN_DEVEL_PREFIX=/home/cram/workspace/cram_tutorial/src/darknet/devel -DCMAKE_INSTALL_PREFIX=/home/cram/workspace/cram_tutorial/src/darknet/install -G Unix Makefiles

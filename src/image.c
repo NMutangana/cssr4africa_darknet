@@ -309,6 +309,90 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
     }
 }
 
+void draw_people_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
+{
+    int i, j;
+    static int person_id = 0; // To assign unique IDs to people
+
+    // Declare a file pointer
+    FILE *output_file = fopen("detections.txt", "w");
+    if (!output_file) {
+        fprintf(stderr, "Error opening output file.\n");
+        return;
+    }
+
+    fprintf(output_file, "Person ID, Confidence, CentroidX, CentroidY, Width, Height, Left, Top, Right, Bottom, Red, Green, Blue\n");
+    for (i = 0; i < num; ++i) {
+        char labelstr[4096] = {0};
+        int person_detected = 0; // Flag to track person detection
+        int class = -1;
+
+        for (j = 0; j < classes; ++j) {
+            if (strcmp(names[j], "person") == 0 && dets[i].prob[j] > thresh) {
+                if (!person_detected) {
+                    person_id++; // Assign a unique ID to the detected person
+                    person_detected = 1;
+                }
+                class = j;
+                break; // Only consider the first "person" class with high confidence
+            }
+        }
+
+        if (person_detected) {
+            float red = ((person_id * 123457) % 255) / 255.0;
+            float green = ((person_id * 567123) % 255) / 255.0;
+            float blue = ((person_id * 989911) % 255) / 255.0;
+            float rgb[3];
+
+            rgb[0] = red;
+            rgb[1] = green;
+            rgb[2] = blue;
+            box b = dets[i].bbox;
+
+            int left = (b.x - b.w / 2.) * im.w;
+            int right = (b.x + b.w / 2.) * im.w;
+            int top = (b.y - b.h / 2.) * im.h;
+            int bot = (b.y + b.h / 2.) * im.h;
+
+            if (left < 0) left = 0;
+            if (right > im.w - 1) right = im.w - 1;
+            if (top < 0) top = 0;
+            if (bot > im.h - 1) bot = im.h - 1;
+
+            // Draw bounding box
+            draw_box_width(im, left, top, right, bot, 2, red, green, blue);
+
+            // Output information to the file
+            fprintf(output_file, "%d, %.4f, %.2f, %.2f, %d, %d, %d, %d, %d, %d, %.2f, %.2f, %.2f\n",
+                person_id, dets[i].prob[class], (left + right) / 2.0, (top + bot) / 2.0, right - left, bot - top, left, top, right, bot, red, green, blue);
+
+            if (alphabet) {
+                // Add person ID as the label
+                snprintf(labelstr, sizeof(labelstr), "Person %d", person_id);
+                image label = get_label(alphabet, labelstr, (im.h * .02));
+                draw_label(im, top + 2, left, label, rgb);
+                free_image(label);
+            }
+
+            if (dets[i].mask) {
+                image mask = float_to_image(14, 14, 1, dets[i].mask);
+                image resized_mask = resize_image(mask, b.w * im.w, b.h * im.h);
+                image tmask = threshold_image(resized_mask, .5);
+                embed_image(tmask, im, left, top);
+                free_image(mask);
+                free_image(resized_mask);
+                free_image(tmask);
+            }
+        }
+    }
+
+    // Close the output file
+    fclose(output_file);
+}
+
+
+
+
 void transpose_image(image im)
 {
     assert(im.w == im.h);

@@ -1,0 +1,2 @@
+Person ID, Confidence, CentroidX, CentroidY, Width, Height, Left, Top, Right, Bottom, Red, Green, Blue
+1, 0.9891, 389.00, 371.50, 110, 215, 334, 264, 444, 479, 0.15, 0.01, 0.00
